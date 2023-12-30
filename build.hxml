@@ -1,5 +1,6 @@
 -lib kiss
 -lib hxnodejs
+-cp externs
 -cp src
 --main Main
 -js index.js

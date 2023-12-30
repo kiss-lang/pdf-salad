@@ -1,9 +1,10 @@
 (import haxe.Constraints)
 (import js.lib.Uint8Array)
 (import js.node.Fs)
+(import js.node.Buffer)
 (import js.lib.Promise)
-(import Externs)
 
+(import pdf_lib.PDFDocument)
 
 (function loadAll [:Array<String> paths]
     (Promise.all
@@ -21,8 +22,8 @@
                 pages (Promise.all
                         (for _ (range 0 (Std.parseInt numPages))
                             (let [:PDFDocument pdf (nth inputPdfs (Std.random inputPdfs.length))
-                                    page (Std.random (pdf.getPageCount))]
+                                    :Float page (Std.random (Std.int (pdf.getPageCount)))]
                                 (saladPdf.copyPages pdf [page]))))]
         (doFor page pages (saladPdf.addPage (first page)))
         (awaitLet [bytesOut (saladPdf.save)]
-            (Fs.writeFileSync "out.pdf" bytesOut))))
+            (Fs.writeFileSync "out.pdf" (Buffer.from bytesOut)))))
