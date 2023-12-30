@@ -1,0 +1,75 @@
+(import haxe.Constraints)
+(import js.lib.Uint8Array)
+(import js.node.Fs)
+(import js.node.Buffer)
+
+(import pdf_lib.PDFDocument)
+(import js.lib.Promise)
+
+(defNew [&prop :Array<String> _pdfs
+            &prop :RandomizerArgs args]
+    
+    [
+        :Array<String> pdfs
+                        (filter
+                            (for path _pdfs
+                                (when (path.endsWith ".pdf")
+                                    path)))
+        &mut :Array<String> mutPdfs []
+        :Map<String,PDFDocument> pdfMap (new Map)
+        :Map<PDFDocument,Array<Int>> pdfPageMap (new Map)
+        &mut :Array<Dynamic> pdfPageArray []
+        &mut :PDFDocument outputPdf null
+    ])
+
+(function fromFolder [:String folder :RandomizerArgs args]
+    (new Randomizer (for file (Fs.readdirSync folder) (joinPath folder file)) args))
+
+(method run [:String->Void onFinish]
+    (set mutPdfs pdfs)
+    (set pdfPageArray [])
+    (pdfMap.clear)
+    (pdfPageMap.clear)
+    (awaitLet [inputPdfs (PDFTools.loadAll pdfs)
+                newPdf (PDFDocument.create)]
+        (catch [error]
+            ~error)
+
+        (set outputPdf newPdf)
+        (doFor [file pdf] (zip pdfs inputPdfs)
+            (dictSet pdfMap file pdf)
+            (let [pageCount (Std.int (pdf.getPageCount))
+                    pageCountArray (collect (range pageCount))]
+                (dictSet pdfPageMap pdf pageCountArray)
+                (set pdfPageArray (concat pdfPageArray (zip (for _ (range pageCount) file) pageCountArray)))))
+        
+        
+        // Default arguments
+        (unless args.chunkPages (set args.chunkPages 1))
+        (unless args.outputPages (set args.outputPages (Std.int (apply + (for pdf inputPdfs (pdf.getPageCount))))))
+        (when (= null args.equalWeightPdfs)
+            (set args.equalWeightPdfs true))
+
+        (runIteration onFinish)))
+                
+(method isFinished [] true)
+                
+(method runIteration [:String->Void onFinish]
+    (if (isFinished)
+            (awaitLet [bytesOut (outputPdf.save)
+                        &sync outFile "random-$(.replace (.toString (Date.now)) ":" "-").pdf"]
+                (Fs.writeFileSync outFile (Buffer.from bytesOut))
+                (onFinish outFile))
+        {
+            
+        }))
+
+/*
+                pages (Promise.all
+                        (for _ (range 0 (Std.parseInt numPages))
+                            (let [:PDFDocument pdf (nth inputPdfs (Std.random inputPdfs.length))
+                                    :Float page (Std.random (Std.int (pdf.getPageCount)))]
+                                (saladPdf.copyPages pdf [page]))))]
+        (doFor page pages (saladPdf.addPage (first page)))
+        ))*/
+

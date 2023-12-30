@@ -1,0 +1,10 @@
+(import js.lib.Promise)
+(import pdf_lib.PDFDocument)
+(import js.node.Fs)
+
+(function loadAll [:Array<String> paths]
+    (Promise.all
+        (filter
+            (for path paths
+                (when (path.endsWith ".pdf")
+                    (PDFDocument.load (Fs.readFileSync path)))))))
