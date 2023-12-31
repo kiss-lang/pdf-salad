@@ -17,7 +17,7 @@
                                     path)))
         &mut :Array<String> mutPdfs []
         :Map<String,PDFDocument> pdfMap (new Map)
-        :Map<PDFDocument,Array<Int>> pdfPageMap (new Map)
+        :Map<PDFDocument,Array<Float>> pdfPageMap (new Map)
         &mut :Array<Dynamic> pdfPageArray []
         &mut :PDFDocument outputPdf null
     ])
@@ -39,7 +39,7 @@
         (doFor [file pdf] (zip pdfs inputPdfs)
             (dictSet pdfMap file pdf)
             (let [pageCount (Std.int (pdf.getPageCount))
-                    pageCountArray (collect (range pageCount))]
+                    pageCountArray (for i (range pageCount) (+ 0.0 i))]
                 (dictSet pdfPageMap pdf pageCountArray)
                 (set pdfPageArray (concat pdfPageArray (zip (for _ (range pageCount) file) pageCountArray)))))
         
@@ -82,8 +82,21 @@
                                 ((<= args.chunkPages 0)
                                     (pdfMap.remove nextPdf)
                                     (mutPdfs.remove nextPdf)
-                                    (collect (range (Std.int (nextPdfDocument.getPageCount)))))))]
+                                    (collect (range (Std.int (nextPdfDocument.getPageCount)))))
+                                // Just take a chunk
+                                (true
+                                    (.splice 
+                                        (dictGet pdfPageMap nextPdfDocument) 
+                                        (cond
+                                            (args.sequentialWithinPdf
+                                                0)
+                                            (true
+                                                (Std.int (* args.chunkPages (Std.random (Math.ceil (/ .length (dictGet pdfPageMap nextPdfDocument) args.chunkPages)))))))
+                                        args.chunkPages))))]
                 (awaitLet [pages takeChunkPromise]
+                    (when (= 0 .length (dictGet pdfPageMap nextPdfDocument))
+                        (pdfMap.remove nextPdf)
+                        (mutPdfs.remove nextPdf))
                     (doFor page pages
                         (outputPdf.addPage page))
                     // If a chunk put the PDF over its max page count, remove extra pages
