@@ -7,4 +7,4 @@
 (import js.lib.Promise)
 
 (let [[sourceDir numPages] (Sys.args)]
-    (.run (Randomizer.fromFolder sourceDir (object outputPages (Std.parseInt numPages))) ->:Void output null))
+    (.run (Randomizer.fromFolder sourceDir (object outputPages (Std.parseInt numPages) chunkPages 0)) ->:Void output null))

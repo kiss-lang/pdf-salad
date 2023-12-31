@@ -52,15 +52,46 @@
 
         (runIteration onFinish)))
                 
-(method isFinished [] true)
+(method isFinished []
+    (or (= 0 (count pdfMap))
+        (= args.outputPages (outputPdf.getPageCount))))
                 
-(method runIteration [:String->Void onFinish]
+(method :Void runIteration [:String->Void onFinish]
     (if (isFinished)
             (awaitLet [bytesOut (outputPdf.save)
                         &sync outFile "random-$(.replace (.toString (Date.now)) ":" "-").pdf"]
+                (catch [error]
+                    ~error)
+
                 (Fs.writeFileSync outFile (Buffer.from bytesOut))
                 (onFinish outFile))
         {
+            // Choose next pdf
+            (let [nextPdf 
+                        (cond
+                            (args.equalWeightPdfs
+                                (nth mutPdfs (Std.random mutPdfs.length)))
+                            (true
+                                (let [[pdf _] (nth pdfPageArray (Std.random pdfPageArray.length))]
+                                    pdf)))
+                    nextPdfDocument (dictGet pdfMap ~nextPdf)
+                    takeChunkPromise
+                        (outputPdf.copyPages nextPdfDocument
+                            (cond
+                                // Take whole PDF
+                                ((<= args.chunkPages 0)
+                                    (pdfMap.remove nextPdf)
+                                    (mutPdfs.remove nextPdf)
+                                    (collect (range (Std.int (nextPdfDocument.getPageCount)))))))]
+                (awaitLet [pages takeChunkPromise]
+                    (doFor page pages
+                        (outputPdf.addPage page))
+                    // If a chunk put the PDF over its max page count, remove extra pages
+                    (while (> (outputPdf.getPageCount) args.outputPages)
+                        (outputPdf.removePage (- (outputPdf.getPageCount) 1)))
+
+                    (runIteration onFinish)))
+
             
         }))
 
