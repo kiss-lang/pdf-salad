@@ -3,6 +3,7 @@
 (import js.node.Fs)
 (import js.node.Buffer)
 
+(import pdf_lib.PDFFont)
 (import pdf_lib.PDFDocument)
 (import js.lib.Promise)
 
@@ -31,7 +32,8 @@
     (pdfMap.clear)
     (pdfPageMap.clear)
     (awaitLet [inputPdfs (PDFTools.loadAll pdfs)
-                newPdf (PDFDocument.create)]
+                newPdf (PDFDocument.create)
+                font (newPdf.embedFont "Helvetica")]
         (catch [error]
             ~error)
 
@@ -50,13 +52,13 @@
         (when (= null args.equalWeightPdfs)
             (set args.equalWeightPdfs true))
 
-        (runIteration onFinish)))
+        (runIteration onFinish font)))
                 
 (method isFinished []
     (or (= 0 (count pdfMap))
         (= args.outputPages (outputPdf.getPageCount))))
                 
-(method :Void runIteration [:String->Void onFinish]
+(method :Void runIteration [:String->Void onFinish :PDFFont font]
     (if (isFinished)
             (awaitLet [bytesOut (outputPdf.save)
                         &sync outFile "random-$(.replace (.toString (Date.now)) ":" "-").pdf"]
@@ -75,35 +77,38 @@
                                 (let [[pdf _] (nth pdfPageArray (Std.random pdfPageArray.length))]
                                     pdf)))
                     nextPdfDocument (dictGet pdfMap ~nextPdf)
+                    :Array<Float> slice
+                        (cond
+                            // Take whole PDF
+                            ((<= args.chunkPages 0)
+                                (pdfMap.remove nextPdf)
+                                (mutPdfs.remove nextPdf)
+                                (collect (range (Std.int (nextPdfDocument.getPageCount)))))
+                            // Just take a chunk
+                            (true
+                                (.splice 
+                                    (dictGet pdfPageMap nextPdfDocument) 
+                                    (cond
+                                        (args.sequentialWithinPdf
+                                            0)
+                                        (true
+                                            (Std.int (* args.chunkPages (Std.random (Math.ceil (/ .length (dictGet pdfPageMap nextPdfDocument) args.chunkPages)))))))
+                                    args.chunkPages)))
                     takeChunkPromise
-                        (outputPdf.copyPages nextPdfDocument
-                            (cond
-                                // Take whole PDF
-                                ((<= args.chunkPages 0)
-                                    (pdfMap.remove nextPdf)
-                                    (mutPdfs.remove nextPdf)
-                                    (collect (range (Std.int (nextPdfDocument.getPageCount)))))
-                                // Just take a chunk
-                                (true
-                                    (.splice 
-                                        (dictGet pdfPageMap nextPdfDocument) 
-                                        (cond
-                                            (args.sequentialWithinPdf
-                                                0)
-                                            (true
-                                                (Std.int (* args.chunkPages (Std.random (Math.ceil (/ .length (dictGet pdfPageMap nextPdfDocument) args.chunkPages)))))))
-                                        args.chunkPages))))]
+                        (outputPdf.copyPages nextPdfDocument slice)]
                 (awaitLet [pages takeChunkPromise]
                     (when (= 0 .length (dictGet pdfPageMap nextPdfDocument))
                         (pdfMap.remove nextPdf)
                         (mutPdfs.remove nextPdf))
-                    (doFor page pages
+                    (doFor [idx page] (zip slice pages)
+                        (when args.sourceLinksFolder
+                            (PDFTools.addPageLink page font (joinPath args.sourceLinksFolder nextPdf) idx))
                         (outputPdf.addPage page))
                     // If a chunk put the PDF over its max page count, remove extra pages
                     (while (> (outputPdf.getPageCount) args.outputPages)
                         (outputPdf.removePage (- (outputPdf.getPageCount) 1)))
 
-                    (runIteration onFinish)))
+                    (runIteration onFinish font)))
 
             
         }))

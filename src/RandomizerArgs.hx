@@ -11,5 +11,7 @@ typedef RandomizerArgs = {
     ?outputPages:Int,
     // When true, each pdf is equally likely to be the next one chosen for the output. When false, the number of pages in a PDF functions as its "weight" in randomization.
     // Default true
-    ?equalWeightPdfs:Bool
+    ?equalWeightPdfs:Bool,
+    // When an absolute folder path is provided, annotate each page with a link to its source pdf, which must be in this folder.
+    ?sourceLinksFolder:String
 };

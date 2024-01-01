@@ -1,6 +1,11 @@
 (import js.lib.Promise)
 (import pdf_lib.PDFDocument)
+(import pdf_lib.PDFPage)
+(import pdf_lib.PDFFont)
+(import pdf_lib.PDFString)
+(import pdf_lib.PDFName)
 (import js.node.Fs)
+(using haxe.io.Path)
 
 (function loadAll [:Array<String> paths]
     (Promise.all
@@ -8,3 +13,36 @@
             (for path paths
                 (when (path.endsWith ".pdf")
                     (PDFDocument.load (Fs.readFileSync path)))))))
+
+(function dynArray [&rest :Array<Dynamic> a] a)
+
+// Based on https://github.com/Hopding/pdf-lib/issues/555#issuecomment-670241308
+// Modified behavior to preserve original annots if there are any
+(function addPageLink [:PDFPage page :PDFFont font :String href :Float pageNum]
+    (let [textSize 20
+            margin 10
+            w (page.getWidth)
+            h (page.getHeight)
+            rect [0 (iTenth h) (Std.int (+ textSize (* 2 margin))) (Std.int (* .length (href.withoutDirectory) textSize))]
+            annot ~(page.doc.context.register
+                    ~(page.doc.context.obj
+                        (object
+                            Type "Annot"
+                            Subtype "Link"
+                            Rect rect
+                            Border [0 0 2]
+                            C [0 0 1]
+                            A (object
+                                    Type "Action"
+                                    S "GoToR"
+                                    F (PDFString.of ~href)
+                                    D (dynArray pageNum "XYZ" null null null)))))]
+        (page.drawText (href.withoutDirectory)
+            (object
+                x (Std.int (+ margin (/ textSize 2)))
+                y (Std.int (+ (iTenth h) margin))
+                size textSize
+                font font
+                color (PdfLib.rgb 0 0 0.7)
+                rotate (PdfLib.degrees 90)))
+        (page.node.addAnnot annot)))
