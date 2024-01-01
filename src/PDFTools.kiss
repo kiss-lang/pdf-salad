@@ -36,7 +36,8 @@
                                     Type "Action"
                                     S "GoToR"
                                     F (PDFString.of ~href)
-                                    D (dynArray pageNum "XYZ" null null null)))))]
+                                    D (dynArray pageNum "XYZ" null null null)
+                                    NewWindow true))))]
         (page.drawText (href.withoutDirectory)
             (object
                 x (Std.int (+ margin (/ textSize 2)))
