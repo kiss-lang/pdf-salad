@@ -76,7 +76,7 @@
                             (true
                                 (let [[pdf _] (nth pdfPageArray (Std.random pdfPageArray.length))]
                                     pdf)))
-                    nextPdfDocument (dictGet pdfMap ~nextPdf)
+                    nextPdfDocument (dictGet pdfMap nextPdf)
                     :Array<Float> slice
                         (cond
                             // Take whole PDF

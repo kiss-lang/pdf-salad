@@ -24,8 +24,8 @@
             w (page.getWidth)
             h (page.getHeight)
             rect [0 (iTenth h) (Std.int (+ textSize (* 2 margin))) (Std.int (* .length (href.withoutDirectory) textSize))]
-            annot ~(page.doc.context.register
-                    ~(page.doc.context.obj
+            annot (page.doc.context.register
+                    (page.doc.context.obj
                         (object
                             Type "Annot"
                             Subtype "Link"
@@ -35,7 +35,7 @@
                             A (object
                                     Type "Action"
                                     S "GoToR"
-                                    F (PDFString.of ~href)
+                                    F (PDFString.of href)
                                     D (dynArray pageNum "XYZ" null null null)
                                     NewWindow true))))]
         (page.drawText (href.withoutDirectory)
