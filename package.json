@@ -1,8 +1,11 @@
 {
   "name": "pdf-salad",
-  "version": "0.0.0",
+  "version": "0.0.4",
   "description": "",
   "main": "index.js",
+  "bin": {
+    "execute": "index.js"
+  },
   "dependencies": {
     "pdf-lib": "^1.17.1"
   },

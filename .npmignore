@@ -1,0 +1,7 @@
+haxe_libraries/
+externs/
+.haxerc
+src/
+build.hxml
+test.sh
+*.pdf

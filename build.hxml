@@ -1,6 +1,7 @@
 -lib kiss
 -lib hxnodejs
 -lib hxargs
+-lib node-shebang
 -w -WDeprecated
 -cp externs
 -cp src
